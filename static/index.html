@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>inno-sna-project — CI/CD + Infrastructure</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0e0e;
+      --bg-card: #161616;
+      --bg-secondary: #1c1c1c;
+      --border: rgba(255,255,255,0.08);
+      --border-hover: rgba(255,255,255,0.15);
+      --text-primary: #f0f0f0;
+      --text-secondary: #888;
+      --text-muted: #555;
+      --green: #1D9E75;
+      --green-dim: rgba(29,158,117,0.12);
+      --amber: #EF9F27;
+      --amber-dim: rgba(239,159,39,0.12);
+      --blue: #378ADD;
+      --blue-dim: rgba(55,138,221,0.12);
+      --red: #E24B4A;
+      --red-dim: rgba(226,75,74,0.12);
+      --gray: #888780;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    .site {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem 4rem;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 1.5rem;
+      border-bottom: 0.5px solid var(--border);
+      margin-bottom: 3rem;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .dot-row { display: flex; gap: 5px; align-items: center; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot.g { background: var(--green); }
+    .dot.a { background: var(--amber); }
+    .dot.r { background: var(--red); }
+    .nav-links { display: flex; gap: 2rem; }
+    .nav-links a {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text-primary); }
+
+    .hero { margin-bottom: 3.5rem; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      background: var(--green-dim);
+      color: var(--green);
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 1.25rem;
+      font-weight: 500;
+      border: 0.5px solid rgba(29,158,117,0.25);
+    }
+    h1 {
+      font-size: 36px;
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1.15;
+      letter-spacing: -1px;
+      margin-bottom: 1rem;
+    }
+    h1 span { color: var(--text-muted); }
+    .subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      max-width: 620px;
+    }
+    .subtitle a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+    .subtitle a:hover { text-decoration: underline; }
+
+    .section-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .pipeline { margin-bottom: 3.5rem; }
+    .stages {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .stage {
+      background: var(--bg-card);
+      padding: 1.25rem;
+      border-right: 0.5px solid var(--border);
+      position: relative;
+      transition: background 0.15s;
+    }
+    .stage:last-child { border-right: none; }
+    .stage:hover { background: var(--bg-secondary); }
+    .stage-arrow {
+      position: absolute;
+      right: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 20px;
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: var(--text-muted);
+      z-index: 2;
+    }
+    .stage:last-child .stage-arrow { display: none; }
+    .stage-num {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .stage-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+    .job {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+      font-family: 'Inter', sans-serif;
+    }
+    .job-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .rollback-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      background: var(--red-dim);
+      color: var(--red);
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+      font-family: 'Inter', sans-serif;
+      border: 0.5px solid rgba(226,75,74,0.2);
+    }
+
+    .repos {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-bottom: 3.5rem;
+    }
+    .repo-card {
+      background: var(--bg-card);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      transition: border-color 0.15s;
+    }
+    .repo-card:hover { border-color: var(--border-hover); }
+    .repo-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.25rem;
+      padding-bottom: 1rem;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .repo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .repo-icon.app { background: var(--blue-dim); color: var(--blue); }
+    .repo-title { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+    .repo-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      font-family: 'Inter', sans-serif;
+    }
+    .file-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px 1.5rem;
+    }
+    @media (max-width: 640px) {
+      .file-grid { grid-template-columns: 1fr; }
+    }
+    .file {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      padding: 4px 0;
+    }
+    .file i { font-size: 14px; color: var(--text-muted); }
+    .file-name { color: var(--text-primary); }
+    .file-desc { color: var(--text-muted); font-family: 'Inter', sans-serif; }
+
+    .deliverables { margin-bottom: 3.5rem; }
+    .deliv-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .deliv-item {
+      background: var(--bg-card);
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.125rem;
+      transition: border-color 0.15s;
+    }
+    .deliv-item:hover { border-color: var(--border-hover); }
+    .deliv-num {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .deliv-text {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    .workflow { margin-bottom: 3.5rem; }
+    .branches {
+      background: var(--bg-card);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+    }
+    .branch-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .branch-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .branch-row:first-child { padding-top: 0; }
+    .branch-chip {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-weight: 500;
+      min-width: 140px;
+      text-align: center;
+    }
+    .branch-chip.main { background: var(--green-dim); color: var(--green); border: 0.5px solid rgba(29,158,117,0.25); }
+    .branch-chip.dispatch { background: var(--blue-dim); color: var(--blue); border: 0.5px solid rgba(55,138,221,0.25); }
+    .branch-chip.prod { background: var(--amber-dim); color: var(--amber); border: 0.5px solid rgba(239,159,39,0.25); }
+    .branch-desc { font-size: 12px; color: var(--text-secondary); font-family: 'Inter', sans-serif; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .footer-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+    }
+    .status-row { display: flex; gap: 16px; }
+    .status-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-family: 'Inter', sans-serif;
+    }
+
+    @media (max-width: 640px) {
+      .stages { grid-template-columns: 1fr 1fr; }
+      .deliv-grid { grid-template-columns: 1fr 1fr; }
+      h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="site">
+
+    <nav>
+      <div class="nav-logo">
+        <div class="dot-row">
+          <div class="dot g"></div>
+          <div class="dot a"></div>
+          <div class="dot r"></div>
+        </div>
+        &nbsp;inno-sna-project
+      </div>
+      <div class="nav-links">
+        <a href="#pipeline">pipeline</a>
+        <a href="#layout">layout</a>
+        <a href="#deliverables">deliverables</a>
+      </div>
+    </nav>
+
+    <div class="hero">
+      <div class="badge">
+        <i class="ti ti-brand-github"></i>
+        GitHub Actions + GHCR
+      </div>
+      <h1>CI/CD + Infrastructure<br><span>as Code</span></h1>
+      <p class="subtitle">
+        Monorepo: FastAPI service, tests with pytest, container image via Docker, publish to GitHub Container Registry,
+        then Ansible (<code style="color:var(--text-primary)">infra/deploy.yml</code>) pulls the image and runs
+        <code style="color:var(--text-primary)">docker compose</code> on staging or production.
+        JSON API: <a href="/api">/api</a> · health: <a href="/health">/health</a>
+      </p>
+    </div>
+
+    <div class="pipeline" id="pipeline">
+      <div class="section-label">pipeline stages (ci-cd.yml)</div>
+      <div class="stages">
+
+        <div class="stage">
+          <div class="stage-arrow"><i class="ti ti-chevron-right"></i></div>
+          <div class="stage-num">01</div>
+          <div class="stage-name">ci</div>
+          <div class="job"><div class="job-dot" style="background:var(--blue)"></div>checkout</div>
+          <div class="job"><div class="job-dot" style="background:var(--blue)"></div>setup-uv + Python 3.12</div>
+          <div class="job"><div class="job-dot" style="background:var(--blue)"></div>uv sync --frozen</div>
+        </div>
+
+        <div class="stage">
+          <div class="stage-arrow"><i class="ti ti-chevron-right"></i></div>
+          <div class="stage-num">02</div>
+          <div class="stage-name">test &amp; image</div>
+          <div class="job"><div class="job-dot" style="background:var(--green)"></div>uv run pytest</div>
+          <div class="job"><div class="job-dot" style="background:var(--green)"></div>login GHCR</div>
+          <div class="job"><div class="job-dot" style="background:var(--green)"></div>docker build-push-action</div>
+        </div>
+
+        <div class="stage">
+          <div class="stage-arrow"><i class="ti ti-chevron-right"></i></div>
+          <div class="stage-num">03</div>
+          <div class="stage-name">staging</div>
+          <div class="job"><div class="job-dot" style="background:var(--amber)"></div>self-hosted runner</div>
+          <div class="job"><div class="job-dot" style="background:var(--amber)"></div>ansible-playbook (local)</div>
+          <div class="job"><div class="job-dot" style="background:var(--amber)"></div>compose pull &amp; up</div>
+        </div>
+
+        <div class="stage">
+          <div class="stage-num">04</div>
+          <div class="stage-name">production</div>
+          <div class="job"><div class="job-dot" style="background:var(--gray)"></div>workflow_dispatch only</div>
+          <div class="job"><div class="job-dot" style="background:var(--gray)"></div>SSH inventory + Ansible</div>
+          <div class="job"><div class="job-dot" style="background:var(--gray)"></div>environment: production</div>
+          <div class="rollback-tag">
+            <i class="ti ti-rotate-clockwise" style="font-size:10px"></i>
+            redeploy via new image tag
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="repos" id="layout">
+      <div class="repo-card">
+        <div class="repo-header">
+          <div class="repo-icon app"><i class="ti ti-brand-python"></i></div>
+          <div>
+            <div class="repo-title">inno-sna-project</div>
+            <div class="repo-sub">Monorepo — FastAPI app, Docker, GitHub Actions, Ansible in infra/</div>
+          </div>
+        </div>
+        <div class="file-grid">
+          <div class="file">
+            <i class="ti ti-file-code"></i>
+            <span class="file-name">src/main.py</span>
+            <span class="file-desc">· FastAPI app</span>
+          </div>
+          <div class="file">
+            <i class="ti ti-file-code"></i>
+            <span class="file-name">src/test_main.py</span>
+            <span class="file-desc">· pytest</span>
+          </div>
+          <div class="file">
+            <i class="ti ti-brand-docker"></i>
+            <span class="file-name">Dockerfile</span>
+            <span class="file-desc">· uv + FastAPI run</span>
+          </div>
+          <div class="file">
+            <i class="ti ti-folder"></i>
+            <span class="file-name">static/index.html</span>
+            <span class="file-desc">· this page</span>
+          </div>
+          <div class="file">
+            <i class="ti ti-file"></i>
+            <span class="file-name">docker-compose.yml</span>
+            <span class="file-desc">· GHCR image on server</span>
+          </div>
+          <div class="file">
+            <i class="ti ti-file"></i>
+            <span class="file-name">docker-compose.local.yml</span>
+            <span class="file-desc">· local build</span>
+          </div>
+          <div class="file">
+            <i class="ti ti-file-code"></i>
+            <span class="file-name">infra/deploy.yml</span>
+            <span class="file-desc">· Ansible playbook</span>
+          </div>
+          <div class="file">
+            <i class="ti ti-settings-2"></i>
+            <span class="file-name">.github/workflows/ci-cd.yml</span>
+            <span class="file-desc">· pipeline</span>
+          </div>
+          <div class="file">
+            <i class="ti ti-file"></i>
+            <span class="file-name">pyproject.toml</span>
+            <span class="file-desc">· deps (FastAPI)</span>
+          </div>
+          <div class="file">
+            <i class="ti ti-file"></i>
+            <span class="file-name">uv.lock</span>
+            <span class="file-desc">· lockfile</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="workflow">
+      <div class="section-label">triggers &amp; deploy</div>
+      <div class="branches">
+        <div class="branch-row">
+          <div class="branch-chip main">push → main</div>
+          <div class="branch-desc">Runs build-and-test, pushes image to GHCR, then deploy-staging (Ansible on self-hosted runner).</div>
+        </div>
+        <div class="branch-row">
+          <div class="branch-chip dispatch">workflow_dispatch</div>
+          <div class="branch-desc">Manual run: choose staging or production. Production uses SSH to the VM and GitHub environment gates.</div>
+        </div>
+        <div class="branch-row">
+          <div class="branch-chip prod">runtime</div>
+          <div class="branch-desc">This page is served at <strong>/</strong>; machine checks can use <strong>/health</strong>.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="deliverables" id="deliverables">
+      <div class="section-label">deliverables</div>
+      <div class="deliv-grid">
+        <div class="deliv-item">
+          <div class="deliv-num">01</div>
+          <div class="deliv-text">GitHub Actions workflow + GHCR</div>
+        </div>
+        <div class="deliv-item">
+          <div class="deliv-num">02</div>
+          <div class="deliv-text">FastAPI + pytest suite</div>
+        </div>
+        <div class="deliv-item">
+          <div class="deliv-num">03</div>
+          <div class="deliv-text">Dockerfile &amp; compose</div>
+        </div>
+        <div class="deliv-item">
+          <div class="deliv-num">04</div>
+          <div class="deliv-text">Ansible deploy playbook</div>
+        </div>
+        <div class="deliv-item">
+          <div class="deliv-num">05</div>
+          <div class="deliv-text">Landing + API in one service</div>
+        </div>
+        <div class="deliv-item">
+          <div class="deliv-num">06</div>
+          <div class="deliv-text">uv-managed dependencies</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="footer-note">Innopolis University &nbsp;·&nbsp; Distributed Systems</div>
+      <div class="status-row">
+        <div class="status-chip"><div class="dot g"></div> /health</div>
+        <div class="status-chip"><div class="dot a"></div> /api</div>
+      </div>
+    </footer>
+
+  </div>
+</body>
+</html>
