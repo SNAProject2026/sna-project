@@ -57,7 +57,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
   deploy-staging:
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_target == 'staging')

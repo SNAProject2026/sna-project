@@ -2,26 +2,36 @@
   hosts: all
   vars:
     app_dir: "~/fastapi-app"
+    image_tag: latest
   tasks:
     - name: Log into GitHub Container Registry
       community.docker.docker_login:
         registry_url: ghcr.io
         username: "{{ ghcr_username }}"
         password: "{{ ghcr_token }}"
+      no_log: true
 
     - name: Create app directory
-      file:
+      ansible.builtin.file:
         path: "{{ app_dir }}"
         state: directory
+        mode: "0755"
 
     - name: Copy docker-compose.yml to server
-      copy:
+      ansible.builtin.copy:
         src: ../docker-compose.yml
         dest: "{{ app_dir }}/docker-compose.yml"
+        mode: "0644"
 
-    - name: Pull latest Docker image
+    - name: Copy monitoring configuration to server
+      ansible.builtin.copy:
+        src: ../monitoring/
+        dest: "{{ app_dir }}/monitoring/"
+        mode: preserve
+
+    - name: Pull Docker image
       community.docker.docker_image:
-        name: "ghcr.io/{{ image_repo }}:latest"
+        name: "ghcr.io/{{ image_repo }}:{{ image_tag }}"
         source: pull
 
     - name: Run Docker Compose
@@ -31,3 +41,4 @@
         pull: always
       environment:
         IMAGE_REPO: "{{ image_repo }}"
+        IMAGE_TAG: "{{ image_tag }}"

@@ -365,8 +365,9 @@
       <p class="subtitle">
         Monorepo: FastAPI service, tests with pytest, container image via Docker, publish to GitHub Container Registry,
         then Ansible (<code style="color:var(--text-primary)">infra/deploy.yml</code>) pulls the image and runs
-        <code style="color:var(--text-primary)">docker compose</code> on staging or production.
-        JSON API: <a href="/api">/api</a> · health: <a href="/health">/health</a>
+        <code style="color:var(--text-primary)">docker compose</code> on staging or production. Prometheus scrapes
+        app metrics and Grafana provides a small monitoring UI. JSON API: <a href="/api">/api</a> ·
+        health: <a href="/health">/health</a> · metrics: <a href="/metrics">/metrics</a>
       </p>
     </div>
 
@@ -389,7 +390,7 @@
           <div class="stage-name">test &amp; image</div>
           <div class="job"><div class="job-dot" style="background:var(--green)"></div>uv run pytest</div>
           <div class="job"><div class="job-dot" style="background:var(--green)"></div>login GHCR</div>
-          <div class="job"><div class="job-dot" style="background:var(--green)"></div>docker build-push-action</div>
+          <div class="job"><div class="job-dot" style="background:var(--green)"></div>push latest + SHA tags</div>
         </div>
 
         <div class="stage">
@@ -409,7 +410,7 @@
           <div class="job"><div class="job-dot" style="background:var(--gray)"></div>environment: production</div>
           <div class="rollback-tag">
             <i class="ti ti-rotate-clockwise" style="font-size:10px"></i>
-            redeploy via new image tag
+            rollback.yml manual restore
           </div>
         </div>
 
@@ -422,7 +423,7 @@
           <div class="repo-icon app"><i class="ti ti-brand-python"></i></div>
           <div>
             <div class="repo-title">inno-sna-project</div>
-            <div class="repo-sub">Monorepo — FastAPI app, Docker, GitHub Actions, Ansible in infra/</div>
+            <div class="repo-sub">Monorepo — FastAPI app, Docker, GitHub Actions, monitoring, Ansible in infra/</div>
           </div>
         </div>
         <div class="file-grid">
@@ -449,12 +450,12 @@
           <div class="file">
             <i class="ti ti-file"></i>
             <span class="file-name">docker-compose.yml</span>
-            <span class="file-desc">· GHCR image on server</span>
+            <span class="file-desc">· app + monitoring stack</span>
           </div>
           <div class="file">
             <i class="ti ti-file"></i>
             <span class="file-name">docker-compose.local.yml</span>
-            <span class="file-desc">· local build</span>
+            <span class="file-desc">· local app + monitoring</span>
           </div>
           <div class="file">
             <i class="ti ti-file-code"></i>
@@ -467,9 +468,19 @@
             <span class="file-desc">· pipeline</span>
           </div>
           <div class="file">
+            <i class="ti ti-rotate-clockwise"></i>
+            <span class="file-name">.github/workflows/rollback.yml</span>
+            <span class="file-desc">· manual rollback</span>
+          </div>
+          <div class="file">
+            <i class="ti ti-chart-line"></i>
+            <span class="file-name">monitoring/prometheus.yml</span>
+            <span class="file-desc">· scrape /metrics</span>
+          </div>
+          <div class="file">
             <i class="ti ti-file"></i>
             <span class="file-name">pyproject.toml</span>
-            <span class="file-desc">· deps (FastAPI)</span>
+            <span class="file-desc">· deps (FastAPI, metrics)</span>
           </div>
           <div class="file">
             <i class="ti ti-file"></i>
@@ -492,8 +503,12 @@
           <div class="branch-desc">Manual run: choose staging or production. Production uses SSH to the VM and GitHub environment gates.</div>
         </div>
         <div class="branch-row">
+          <div class="branch-chip dispatch">rollback.yml</div>
+          <div class="branch-desc">Manual rollback: choose environment and image tag, then Compose pulls that tag and verifies <strong>/health</strong>.</div>
+        </div>
+        <div class="branch-row">
           <div class="branch-chip prod">runtime</div>
-          <div class="branch-desc">This page is served at <strong>/</strong>; machine checks can use <strong>/health</strong>.</div>
+          <div class="branch-desc">This page is served at <strong>/</strong>; machine checks use <strong>/health</strong>; Prometheus uses <strong>/metrics</strong>.</div>
         </div>
       </div>
     </div>
@@ -515,15 +530,15 @@
         </div>
         <div class="deliv-item">
           <div class="deliv-num">04</div>
-          <div class="deliv-text">Ansible deploy playbook</div>
+          <div class="deliv-text">Prometheus + Grafana monitoring</div>
         </div>
         <div class="deliv-item">
           <div class="deliv-num">05</div>
-          <div class="deliv-text">Landing + API in one service</div>
+          <div class="deliv-text">Manual rollback workflow</div>
         </div>
         <div class="deliv-item">
           <div class="deliv-num">06</div>
-          <div class="deliv-text">uv-managed dependencies</div>
+          <div class="deliv-text">Ansible deploy playbook</div>
         </div>
       </div>
     </div>
@@ -533,6 +548,7 @@
       <div class="status-row">
         <div class="status-chip"><div class="dot g"></div> /health</div>
         <div class="status-chip"><div class="dot a"></div> /api</div>
+        <div class="status-chip"><div class="dot r"></div> /metrics</div>
       </div>
     </footer>
 

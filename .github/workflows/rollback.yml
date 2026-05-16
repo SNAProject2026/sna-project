@@ -1,0 +1,127 @@
+name: Manual Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to rollback
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+      image_tag:
+        description: Image tag to deploy, usually a previous commit SHA
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  rollback-staging:
+    if: inputs.environment == 'staging'
+    runs-on: self-hosted
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Rollback staging
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          APP_DIR="$HOME/fastapi-app"
+          IMAGE_REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+
+          mkdir -p "$APP_DIR"
+          cp docker-compose.yml "$APP_DIR/docker-compose.yml"
+          cp -R monitoring "$APP_DIR/"
+
+          cat > "$APP_DIR/.env" <<EOF
+          IMAGE_REPO=$IMAGE_REPO
+          IMAGE_TAG=$IMAGE_TAG
+          GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+          EOF
+
+          echo "$GHCR_TOKEN" | docker login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
+
+          cd "$APP_DIR"
+          docker compose pull api
+          docker compose up -d
+
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              exit 0
+            fi
+            sleep 5
+          done
+
+          docker compose logs api
+          exit 1
+
+  rollback-production:
+    if: inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key and known hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.VM_IP }}" >> ~/.ssh/known_hosts
+
+      - name: Upload Compose and monitoring configuration
+        run: |
+          ssh deploy@${{ secrets.VM_IP }} 'mkdir -p ~/fastapi-app'
+          scp docker-compose.yml deploy@${{ secrets.VM_IP }}:~/fastapi-app/docker-compose.yml
+          scp -r monitoring deploy@${{ secrets.VM_IP }}:~/fastapi-app/
+
+      - name: Rollback production
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          IMAGE_REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+
+          ssh deploy@${{ secrets.VM_IP }} \
+            "REGISTRY='$REGISTRY' \
+             IMAGE_REPO='$IMAGE_REPO' \
+             IMAGE_TAG='$IMAGE_TAG' \
+             GHCR_USERNAME='${{ github.actor }}' \
+             GHCR_TOKEN='$GHCR_TOKEN' \
+             GRAFANA_ADMIN_PASSWORD='${GRAFANA_ADMIN_PASSWORD:-admin}' \
+             bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          cd ~/fastapi-app
+          cat > .env <<EOF
+          IMAGE_REPO=$IMAGE_REPO
+          IMAGE_TAG=$IMAGE_TAG
+          GRAFANA_ADMIN_PASSWORD=$GRAFANA_ADMIN_PASSWORD
+          EOF
+
+          echo "$GHCR_TOKEN" | docker login "$REGISTRY" -u "$GHCR_USERNAME" --password-stdin
+          docker compose pull api
+          docker compose up -d
+
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              exit 0
+            fi
+            sleep 5
+          done
+
+          docker compose logs api
+          exit 1
+          REMOTE

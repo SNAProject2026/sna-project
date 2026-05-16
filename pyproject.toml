@@ -5,6 +5,8 @@ description = "Add your description here"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi[standard]",
+    "prometheus-client>=0.22.1",
+    "prometheus-fastapi-instrumentator>=7.1.0",
 ]
 
 [dependency-groups]
