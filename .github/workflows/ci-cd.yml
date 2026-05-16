@@ -126,4 +126,5 @@ jobs:
           --limit production \
           -e "ghcr_username=${{ github.actor }}" \
           -e "ghcr_token=${{ secrets.GITHUB_TOKEN }}" \
-          -e "image_repo=$LOWERCASE_REPO"
+          -e "image_repo=$LOWERCASE_REPO" \
+          -e "public_url=http://${{ secrets.VM_IP }}"

@@ -29,6 +29,12 @@
         dest: "{{ app_dir }}/monitoring/"
         mode: preserve
 
+    - name: Copy Nginx configuration to server
+      ansible.builtin.copy:
+        src: ../nginx/
+        dest: "{{ app_dir }}/nginx/"
+        mode: preserve
+
     - name: Pull Docker image
       community.docker.docker_image:
         name: "ghcr.io/{{ image_repo }}:{{ image_tag }}"
@@ -42,3 +48,4 @@
       environment:
         IMAGE_REPO: "{{ image_repo }}"
         IMAGE_TAG: "{{ image_tag }}"
+        PUBLIC_URL: "{{ public_url | default('http://localhost') }}"

@@ -41,11 +41,13 @@ jobs:
           mkdir -p "$APP_DIR"
           cp docker-compose.yml "$APP_DIR/docker-compose.yml"
           cp -R monitoring "$APP_DIR/"
+          cp -R nginx "$APP_DIR/"
 
           cat > "$APP_DIR/.env" <<EOF
           IMAGE_REPO=$IMAGE_REPO
           IMAGE_TAG=$IMAGE_TAG
           GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+          PUBLIC_URL=${PUBLIC_URL:-http://localhost}
           EOF
 
           echo "$GHCR_TOKEN" | docker login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
@@ -55,7 +57,7 @@ jobs:
           docker compose up -d
 
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
-            if curl -fsS http://127.0.0.1:8000/health; then
+            if curl -fsS http://127.0.0.1/health; then
               exit 0
             fi
             sleep 5
@@ -84,6 +86,7 @@ jobs:
           ssh deploy@${{ secrets.VM_IP }} 'mkdir -p ~/fastapi-app'
           scp docker-compose.yml deploy@${{ secrets.VM_IP }}:~/fastapi-app/docker-compose.yml
           scp -r monitoring deploy@${{ secrets.VM_IP }}:~/fastapi-app/
+          scp -r nginx deploy@${{ secrets.VM_IP }}:~/fastapi-app/
 
       - name: Rollback production
         env:
@@ -101,6 +104,7 @@ jobs:
              GHCR_USERNAME='${{ github.actor }}' \
              GHCR_TOKEN='$GHCR_TOKEN' \
              GRAFANA_ADMIN_PASSWORD='${GRAFANA_ADMIN_PASSWORD:-admin}' \
+             PUBLIC_URL='${PUBLIC_URL:-http://${{ secrets.VM_IP }}}' \
              bash -s" <<'REMOTE'
           set -euo pipefail
 
@@ -109,6 +113,7 @@ jobs:
           IMAGE_REPO=$IMAGE_REPO
           IMAGE_TAG=$IMAGE_TAG
           GRAFANA_ADMIN_PASSWORD=$GRAFANA_ADMIN_PASSWORD
+          PUBLIC_URL=$PUBLIC_URL
           EOF
 
           echo "$GHCR_TOKEN" | docker login "$REGISTRY" -u "$GHCR_USERNAME" --password-stdin
@@ -116,7 +121,7 @@ jobs:
           docker compose up -d
 
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
-            if curl -fsS http://127.0.0.1:8000/health; then
+            if curl -fsS http://127.0.0.1/health; then
               exit 0
             fi
             sleep 5
