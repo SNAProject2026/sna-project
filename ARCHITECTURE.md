@@ -34,6 +34,15 @@ handles build and deployment.
   Container Registry, and uses the Ansible playbook in `infra/deploy.yml` to
   copy configuration to the host and start the Docker Compose stack.
 
+## Servers
+
+- **Staging server** runs the Docker Compose stack used for validating changes
+  after they land on `main`. Pushes to `main` deploy to staging automatically
+  through GitHub Actions.
+- **Production server** runs the live Docker Compose stack for end users.
+  Production deployments are manual only and require an admin review before the
+  deployment workflow can update the server.
+
 ```mermaid
 flowchart TB
     User["User / Browser"]
@@ -59,8 +68,11 @@ flowchart TB
         Tests["uv sync + pytest"]
         ImageBuild["Docker build"]
         GHCR["GitHub Container Registry<br/>Docker image"]
+        StagingGate["Push to main<br/>automatic staging deploy"]
+        ProductionGate["Manual production deploy<br/>admin review required"]
         Ansible["Ansible deploy playbook<br/>infra/deploy.yml"]
-        Host["Docker host / VM"]
+        StagingHost["Staging server<br/>Docker host / VM"]
+        ProductionHost["Production server<br/>Docker host / VM"]
     end
 
     Static["static/index.html"]
@@ -84,8 +96,13 @@ flowchart TB
     Actions --> Tests
     Tests --> ImageBuild
     ImageBuild -->|"pushes image"| GHCR
-    Actions -->|"runs deployment"| Ansible
-    Ansible -->|"copies compose/config and starts services"| Host
-    Host --> Runtime
+    Actions --> StagingGate
+    Actions --> ProductionGate
+    StagingGate -->|"runs deployment"| Ansible
+    ProductionGate -->|"after admin review"| Ansible
+    Ansible -->|"copies compose/config and starts services"| StagingHost
+    Ansible -->|"copies compose/config and starts services"| ProductionHost
+    StagingHost --> Runtime
+    ProductionHost --> Runtime
     GHCR -->|"api image"| API
 ```
