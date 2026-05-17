@@ -1,0 +1,13 @@
+# Exclude everything by default. Re-include only files required by Dockerfile.
+*
+
+!pyproject.toml
+!uv.lock
+!src/
+!src/**
+!static/
+!static/**
+
+# Keep generated Python artifacts out of the image context.
+**/__pycache__/
+**/*.py[cod]
